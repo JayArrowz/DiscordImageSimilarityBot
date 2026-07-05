@@ -18,7 +18,7 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
     private readonly VllmEmbeddingService _embeddingService;
     private readonly IOptions<AIConfig> _aiConfig;
     private readonly ILogger<QueueHandlerBackgroundService> _logger;
-    private const string UrlPattern = @"^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,63}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$";
+    private const string UrlPattern = @"https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,63}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)";
 
     public QueueHandlerBackgroundService(ILogger<QueueHandlerBackgroundService> logger, IMessageQueue messageQueue, HttpClient http,
         IHasher hasher, IServiceScopeFactory serviceScopeFactory, VllmEmbeddingService embeddingService, IOptions<AIConfig> aiConfig)
@@ -52,8 +52,6 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
         {
             try
             {
-                using var scope = _serviceScopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<ImageSimilarityContext>();
                 var message = await _messageQueue.DequeueMessageAsync(cancellationToken);
                 if (message == null)
                 {
@@ -63,6 +61,9 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
 
                 _logger.LogInformation("Processing message: {id}", message.Id);
 
+                using var scope = _serviceScopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<ImageSimilarityContext>();
+
                 // Process the attachments
                 await ProcessAttachmentsAsync(dbContext, message, cancellationToken);
                 await ProcessContentAsync(dbContext, message, cancellationToken);
@@ -70,6 +71,7 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing message from queue.");
+                await Task.Delay(1000, cancellationToken);
             }
         }
     }
@@ -157,9 +159,9 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
                .Take(1)
                .Select(c => new { SourceImage = c, Distance = 1.0 - c.Embedding!.CosineDistance(vector) })
                .FirstOrDefaultAsync(cancellationToken);
-
+            
             existingImage.Stale = false;
-            var st = results.SourceImage.SimilarityThreshold ?? _aiConfig.Value.ActionableThreshold;
+            var st = results?.SourceImage?.SimilarityThreshold ?? _aiConfig.Value.ActionableThreshold;
             existingImage.Blocked = results != null && results.Distance >= (st);
             existingImage.SourceImageId = results?.SourceImage?.Id;
             if (hasExistingImage)
@@ -191,7 +193,7 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
         var isBannable = _aiConfig.Value.Bannable;
         if (isBannable || attachment.SourceImageId.HasValue)
         {
-            var sourceImage = isBannable ? null : await dbContext.SourceImages.FindAsync(attachment.SourceImageId.Value, cancellationToken);
+            var sourceImage = isBannable ? null : await dbContext.SourceImages.FindAsync([attachment.SourceImageId.Value], cancellationToken);
             if (isBannable || (sourceImage != null && sourceImage.Bannable.GetValueOrDefault()))
             {
                 await message.Guild!.BanUserAsync(message.Author.Id, 0, new NetCord.Rest.RestRequestProperties

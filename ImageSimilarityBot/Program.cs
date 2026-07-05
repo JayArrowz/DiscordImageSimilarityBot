@@ -58,9 +58,9 @@ host.AddSlashCommand("add", "Adds a source image.", async (
 
     [SlashCommandParameter(Name = "uri", Description = "Image URL")]
     string uri,
-    [SlashCommandParameter(Name = "bannable", Description = "Weather the image is bannable")]
+    [SlashCommandParameter(Name = "bannable", Description = "Whether the image is bannable")]
     bool bannable,
-    [SlashCommandParameter(Name = "threshold", Description = "Similiarty threshold 0.0-1.0, higher the number the closer match a image has to be, to be actioned", MinValue = 0.0, MaxValue = 1.0)]
+    [SlashCommandParameter(Name = "threashold", Description = "Similiarty threashold 0.0-1.0, higher the number the closer match a image has to be, to be actioned", MinValue = 0.0, MaxValue = 1.0)]
     double threshold) =>
 {
     using var scope = host.Services.CreateScope();

@@ -1,15 +1,17 @@
 ﻿using ImageSimilarityBot.Interfaces;
 using NetCord.Gateway;
+using System.Collections.Concurrent;
 
 namespace ImageSimilarityBot.Services;
 
 public class InMemoryMessageQueue : IMessageQueue
 {
-    private Queue<Message> _messageQueue = new();
+    private ConcurrentQueue<Message> _messageQueue = new();
 
     public Task<Message?> DequeueMessageAsync(CancellationToken cancellationToken)
     {
-        return Task.FromResult(_messageQueue.Count > 0 ? _messageQueue.Dequeue() : null);
+        _messageQueue.TryDequeue(out var message);
+        return Task.FromResult(message);
     }
 
     public Task EnqueueMessageAsync(Message message, CancellationToken cancellationToken)

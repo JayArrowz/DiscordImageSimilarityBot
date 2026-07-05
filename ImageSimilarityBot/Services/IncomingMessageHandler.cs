@@ -16,7 +16,7 @@ public class IncomingMessageHandler : IMessageCreateGatewayHandler
     public async ValueTask HandleAsync(Message arg)
     {
         var attachments = arg.Attachments.Any(t => t.ContentType?.StartsWith("image/") ?? false);
-        if(attachments || arg.Content.ToLower().Contains("http"))
+        if(arg.Author.IsBot == false && (attachments || arg.Content.ToLower().Contains("http")))
             await _messageQueue.EnqueueMessageAsync(arg, CancellationToken.None);
     }
 }
