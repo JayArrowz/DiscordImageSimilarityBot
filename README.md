@@ -9,6 +9,9 @@ message text — the bot embeds it, compares it against a library of source imag
 and can delete the message (and optionally ban the author) if it matches a known
 image closely enough.
 
+<img width="1249" height="865" alt="image" src="https://github.com/user-attachments/assets/245eaa4b-d571-4c5f-ac4b-aef446a490fd" />
+
+
 ## Architecture
 
 ```
