@@ -1,0 +1,28 @@
+# Local HuggingFace model cache (bind-mounted into vLLM at runtime)
+hf-cache/
+
+# Postgres data directory (bind-mounted at runtime)
+pgdata/
+
+# Source images are bind-mounted at runtime, not baked into the image
+source_images/
+
+# Docker / compose artifacts
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Env files contain secrets
+.env
+.env.*
+
+# Build outputs
+**/bin/
+**/obj/
+
+# IDE / OS
+.vs/
+.vscode/
+.idea/
+*.user
+.DS_Store
