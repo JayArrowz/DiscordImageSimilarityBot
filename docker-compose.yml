@@ -49,9 +49,7 @@ services:
     restart: unless-stopped
 
   bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/jayarrowz/discordimagesimilaritybot:latest
     depends_on:
       postgres:
         condition: service_healthy
