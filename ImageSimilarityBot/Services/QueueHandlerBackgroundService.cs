@@ -162,7 +162,7 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
             
             existingImage.Stale = false;
             var st = results?.SourceImage?.SimilarityThreshold ?? _aiConfig.Value.ActionableThreshold;
-            existingImage.Blocked = results != null && results.Distance >= (st);
+            existingImage.Blocked = results != null && results.Distance >= st;
             existingImage.SourceImageId = results?.SourceImage?.Id;
             if (hasExistingImage)
             {
@@ -191,17 +191,14 @@ public class QueueHandlerBackgroundService : BackgroundService, IDisposable
         await message.DeleteAsync();
         _logger.LogInformation("Deleted message {id} due to blocked image attachment: {url}", message.Id, attachment.ProxyUrl);
         var isBannable = _aiConfig.Value.Bannable;
-        if (isBannable || attachment.SourceImageId.HasValue)
+        var sourceImage = await dbContext.SourceImages.FindAsync([attachment?.SourceImageId.GetValueOrDefault()], cancellationToken);
+        if ((sourceImage!.Bannable != null && sourceImage.Bannable.Value) || (sourceImage!.Bannable == null && isBannable))
         {
-            var sourceImage = isBannable ? null : await dbContext.SourceImages.FindAsync([attachment.SourceImageId.Value], cancellationToken);
-            if (isBannable || (sourceImage != null && sourceImage.Bannable.GetValueOrDefault()))
+            await message.Guild!.BanUserAsync(message.Author.Id, 0, new NetCord.Rest.RestRequestProperties
             {
-                await message.Guild!.BanUserAsync(message.Author.Id, 0, new NetCord.Rest.RestRequestProperties
-                {
-                    AuditLogReason = $"Blocked image matched banned source image: {attachment.ProxyUrl}"
-                }, cancellationToken: cancellationToken);
-                _logger.LogInformation("Blocked image matched banned source image: {path}", attachment.ProxyUrl);
-            }
+                AuditLogReason = $"Blocked image matched banned source image: {attachment.ProxyUrl}"
+            }, cancellationToken: cancellationToken);
+            _logger.LogInformation("Blocked image matched banned source image: {path}", attachment.ProxyUrl);
         }
     }
 
